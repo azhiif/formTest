@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Add Catalogue</title>
+  <style>body{font-family:Arial;padding:16px}label{display:block;margin:8px 0}input{width:100%;padding:6px}</style>
+</head>
+<body>
+  <h2>Add Catalogue</h2>
+  <form id="form">
+    <label>Brand <input name="brand" required></label>
+    <label>Catalogue Name <input name="catalogue_name" required></label>
+    <label>Category <input name="category"></label>
+    <label>Buying Price <input name="buying_price" type="number" step="0.01"></label>
+    <label>Sale Price <input name="sale_price" type="number" step="0.01"></label>
+    <div style="margin-top:12px">
+      <button type="submit">Save</button>
+      <a href="index.html" style="margin-left:12px">Back</a>
+    </div>
+  </form>
+
+  <script src="supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const payload = {
+        brand: f.brand.value.trim() || null,
+        catalogue_name: f.catalogue_name.value.trim(),
+        category: f.category.value.trim() || null,
+        buying_price: f.buying_price.value ? parseFloat(f.buying_price.value) : null,
+        sale_price: f.sale_price.value ? parseFloat(f.sale_price.value) : null
+      };
+
+      // try insert; if duplicate name, update (so get-or-create)
+      const { data, error } = await supabase
+        .from('catalogues')
+        .upsert([payload], { onConflict: 'catalogue_name' })
+        .select();
+
+      if (error) { alert('Error: ' + error.message); console.error(error); }
+      else { alert('Catalogue saved ✓'); f.reset(); }
+    });
+  </script>
+</body>
+</html>

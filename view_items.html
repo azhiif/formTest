@@ -2,90 +2,69 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>View All Data</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    h2 { margin-top: 40px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }
-    th { background: #f0f0f0; }
-    img.thumb { max-width: 80px; max-height:80px; display:block; }
-  </style>
+  <title>View All</title>
+  <style>body{font-family:Arial;padding:20px}h2{margin-top:30px}table{border-collapse:collapse;width:100%;margin-top:8px}th,td{border:1px solid #ccc;padding:6px;vertical-align:top}img.thumb{max-width:80px;max-height:80px}</style>
 </head>
 <body>
-  <h1>All Tables Data</h1>
+  <h1>View All Data</h1>
   <p><a href="index.html">&larr; Back</a></p>
 
   <h2>Customers</h2>
-  <div id="customers-info">Loading...</div>
+  <div id="customers-info"></div>
   <table id="customers-table" hidden><thead></thead><tbody></tbody></table>
 
   <h2>Areas</h2>
-  <div id="areas-info">Loading...</div>
+  <div id="areas-info"></div>
   <table id="areas-table" hidden><thead></thead><tbody></tbody></table>
 
   <h2>Items</h2>
-  <div id="items-info">Loading...</div>
+  <div id="items-info"></div>
   <table id="items-table" hidden><thead></thead><tbody></tbody></table>
 
+  <h2>Products</h2>
+  <div id="products-info"></div>
+  <table id="products-table" hidden><thead></thead><tbody></tbody></table>
+
   <h2>Staff</h2>
-  <div id="staff-info">Loading...</div>
+  <div id="staff-info"></div>
   <table id="staff-table" hidden><thead></thead><tbody></tbody></table>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  function esc(s){ if (s===null||s===undefined) return ''; return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function fmt(v){ if (!v) return ''; if (typeof v==='string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v).toLocaleString(); return esc(v); }
 
-    function esc(s){ if (s===null||s===undefined) return ''; return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function fmt(v){
-      if (!v) return '';
-      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)) return new Date(v).toLocaleString();
-      return esc(v);
-    }
+  async function load(name, id){
+    const info = document.getElementById(id+'-info');
+    const table = document.getElementById(id+'-table');
+    const thead = table.querySelector('thead'); const tbody = table.querySelector('tbody');
+    info.textContent = 'Loading...'; table.hidden=true; thead.innerHTML=''; tbody.innerHTML='';
 
-    async function loadTable(name, prefix) {
-      const info = document.getElementById(prefix + '-info');
-      const table = document.getElementById(prefix + '-table');
-      const thead = table.querySelector('thead');
-      const tbody = table.querySelector('tbody');
-      info.textContent = 'Loading...';
-      table.hidden = true;
-      thead.innerHTML = '';
-      tbody.innerHTML = '';
+    const { data, error } = await supabase.from(name).select('*').order('id',{ascending:false});
+    if (error) { info.textContent = 'Error: '+error.message; console.error(error); return; }
+    if (!data || data.length === 0) { info.textContent = 'No rows'; return; }
 
-      const { data, error } = await supabase.from(name).select('*').order('id', { ascending: false });
-      console.log(name, data, error);
-      if (error) { info.textContent = 'Error: ' + error.message; return; }
-      if (!data || data.length === 0) { info.textContent = 'No rows'; return; }
+    info.textContent = data.length + ' rows';
+    table.hidden = false;
+    const cols = Object.keys(data[0]);
+    thead.innerHTML = '<tr>' + cols.map(c=>`<th>${esc(c)}</th>`).join('') + '</tr>';
+    tbody.innerHTML = data.map(row => '<tr>' + cols.map(col => {
+      const val = row[col];
+      if (name==='staff' && col==='photo_url' && val) return `<td><a href="${esc(val)}" target="_blank"><img class="thumb" src="${esc(val)}"></a></td>`;
+      return `<td>${fmt(val)}</td>`;
+    }).join('') + '</tr>').join('');
+  }
 
-      info.textContent = data.length + ' rows';
-      table.hidden = false;
-
-      // dynamic columns
-      const cols = Object.keys(data[0]);
-      thead.innerHTML = '<tr>' + cols.map(c=>`<th>${esc(c)}</th>`).join('') + '</tr>';
-
-      // special: if staff and photo_url column present, render <img>
-      tbody.innerHTML = data.map(row => {
-        return '<tr>' + cols.map(col => {
-          const val = row[col];
-          if (name === 'staff' && col === 'photo_url' && val) {
-            return `<td><a href="${esc(val)}" target="_blank"><img class="thumb" src="${esc(val)}" alt="photo"></a></td>`;
-          }
-          return `<td>${fmt(val)}</td>`;
-        }).join('') + '</tr>';
-      }).join('');
-    }
-
-    window.onload = function(){
-      loadTable('customers','customers');
-      loadTable('areas','areas');
-      loadTable('items','items');
-      loadTable('staff','staff');
-    };
-  </script>
+  window.onload = function(){
+    load('customers','customers');
+    load('areas','areas');
+    load('items','items');
+    load('products','products');
+    load('staff','staff');
+  };
+</script>
 </body>
 </html>

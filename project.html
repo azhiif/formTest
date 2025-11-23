@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Add Project</title>
+  <style>
+    body{font-family:Arial;padding:16px}
+    .block{border:1px solid #ccc;padding:12px;margin:12px 0;position:relative}
+    label{display:block;margin:6px 0}
+    input,select,textarea{width:100%;padding:6px}
+    .removeBtn{position:absolute;right:8px;top:8px;background:#f66;color:#fff;border:none;padding:4px 6px;cursor:pointer}
+    .small{width:48%;display:inline-block}
+    .small + .small{margin-left:4%}
+  </style>
+</head>
+<body>
+  <h2>Add Project</h2>
+
+  <form id="projectForm">
+    <label>Project Title <input name="title" required></label>
+    <label>Client Name <input name="client_name"></label>
+
+    <div id="areasContainer"></div>
+
+    <div style="margin-top:12px">
+      <button type="button" id="addAreaBtn">+ Add Area</button>
+      <button type="submit" style="margin-left:8px">Save Project</button>
+      <a href="index.html" style="margin-left:12px">Back</a>
+    </div>
+  </form>
+
+  <script src="supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // utils: trim or null
+    const t = v => (v===undefined||v===null||String(v).trim()==='') ? null : String(v).trim();
+
+    // create a block DOM and return element
+    function makeBlock() {
+      const div = document.createElement('div');
+      div.className = 'block';
+
+      // remove button
+      const rem = document.createElement('button');
+      rem.className = 'removeBtn';
+      rem.type = 'button';
+      rem.textContent = 'x';
+      rem.onclick = () => div.remove();
+      div.appendChild(rem);
+
+      // area: input with datalist to allow typing or choosing
+      const areaLabel = document.createElement('label');
+      areaLabel.innerHTML = 'Area (select or type)<input name="area" list="areas_list">';
+      div.appendChild(areaLabel);
+
+      // measurement w,h side-by-side
+      const wLabel = document.createElement('label');
+      wLabel.innerHTML = 'Width (W) <input name="width" class="small" placeholder="width">';
+      const hLabel = document.createElement('label');
+      hLabel.innerHTML = 'Height (H) <input name="height" class="small" placeholder="height">';
+      // make them inline
+      const wrapper = document.createElement('div');
+      wrapper.style.margin = '6px 0';
+      wrapper.appendChild(wLabel.firstChild); // text node of label not needed, use inputs
+      // simpler: create two inputs manually
+      const winput = document.createElement('input'); winput.name='width'; winput.placeholder='width'; winput.style.width='48%'; winput.style.display='inline-block';
+      const hinput = document.createElement('input'); hinput.name='height'; hinput.placeholder='height'; hinput.style.width='48%'; hinput.style.display='inline-block'; hinput.style.marginLeft='4%';
+      const measDiv = document.createElement('div'); measDiv.style.margin='6px 0';
+      measDiv.appendChild(winput); measDiv.appendChild(hinput);
+      div.appendChild(measDiv);
+
+      // item select or type
+      const itemLabel = document.createElement('label');
+      itemLabel.innerHTML = 'Item (select or type)<input name="item" list="items_list">';
+      div.appendChild(itemLabel);
+
+      // catalogue select or type
+      const catLabel = document.createElement('label');
+      catLabel.innerHTML = 'Catalogue (select or type)<input name="catalogue" list="catalogues_list">';
+      div.appendChild(catLabel);
+
+      // code
+      const codeLabel = document.createElement('label');
+      codeLabel.innerHTML = 'Code <input name="code">';
+      div.appendChild(codeLabel);
+
+      // description
+      const descLabel = document.createElement('label');
+      descLabel.innerHTML = 'Description <textarea name="description"></textarea>';
+      div.appendChild(descLabel);
+
+      return div;
+    }
+
+    // add new block
+    document.getElementById('addAreaBtn').addEventListener('click', () => {
+      const b = makeBlock();
+      document.getElementById('areasContainer').appendChild(b);
+      refreshDatalists();
+    });
+
+    // load existing areas/items/catalogues into datalists
+    async function fetchLists() {
+      const [areasR, itemsR, catsR] = await Promise.all([
+        supabase.from('areas').select('name').order('name'),
+        supabase.from('items').select('id,name,catalogue_id').order('name'),
+        supabase.from('catalogues').select('id,catalogue_name').order('catalogue_name')
+      ]);
+      return { areas: areasR.data || [], items: itemsR.data || [], catalogues: catsR.data || [] };
+    }
+
+    // populate datalists in the DOM (create <datalist id="..."> elements if missing)
+    async function refreshDatalists() {
+      const lists = await fetchLists();
+      // areas list
+      let dl = document.getElementById('areas_list');
+      if (!dl) { dl = document.createElement('datalist'); dl.id='areas_list'; document.body.appendChild(dl); }
+      dl.innerHTML = lists.areas.map(a => `<option value="${escapeHtml(a.name)}">`).join('');
+
+      let dlItems = document.getElementById('items_list');
+      if (!dlItems) { dlItems = document.createElement('datalist'); dlItems.id='items_list'; document.body.appendChild(dlItems); }
+      dlItems.innerHTML = lists.items.map(i => `<option value="${escapeHtml(i.name)}">`).join('');
+
+      let dlCats = document.getElementById('catalogues_list');
+      if (!dlCats) { dlCats = document.createElement('datalist'); dlCats.id='catalogues_list'; document.body.appendChild(dlCats); }
+      dlCats.innerHTML = lists.catalogues.map(c => `<option value="${escapeHtml(c.catalogue_name)}">`).join('');
+    }
+
+    function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+    // find-or-create helpers
+    async function getOrCreateArea(name) {
+      name = t(name);
+      if (!name) return null;
+      // lookup
+      let { data, error } = await supabase.from('areas').select('id').ilike('name', name).limit(1);
+      if (error) throw error;
+      if (data && data.length) return data[0].id;
+      // insert
+      const ins = await supabase.from('areas').insert([{ name }]).select();
+      if (ins.error) throw ins.error;
+      return ins.data[0].id;
+    }
+
+    async function getOrCreateCatalogue(catalogue_name) {
+      const name = t(catalogue_name);
+      if (!name) return null;
+      // lookup by catalogue_name
+      let { data, error } = await supabase.from('catalogues').select('id').ilike('catalogue_name', name).limit(1);
+      if (error) throw error;
+      if (data && data.length) return data[0].id;
+      // insert minimal catalogue (no brand/category/prices here)
+      const ins = await supabase.from('catalogues').insert([{ catalogue_name: name }]).select();
+      if (ins.error) throw ins.error;
+      return ins.data[0].id;
+    }
+
+    async function getOrCreateItem(name, catalogue_id=null) {
+      name = t(name);
+      if (!name) return null;
+      // try find by name
+      let { data, error } = await supabase.from('items').select('id').ilike('name', name).limit(1);
+      if (error) throw error;
+      if (data && data.length) {
+        const found = data[0];
+        // if item exists but has no catalogue_id and we have one, update it
+        if (catalogue_id && (!found.catalogue_id)) {
+          const upd = await supabase.from('items').update({ catalogue_id }).ilike('name', name);
+          if (upd.error) console.warn('update item catalogue failed', upd.error);
+        }
+        return found.id;
+      }
+      // insert new item
+      const ins = await supabase.from('items').insert([{ name, catalogue_id }]).select();
+      if (ins.error) throw ins.error;
+      return ins.data[0].id;
+    }
+
+    // on submit: create project, then project_areas rows
+    document.getElementById('projectForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const title = t(f.title.value);
+      if (!title) { alert('Project title required'); return; }
+      const client = t(f.client_name.value);
+
+      try {
+        // create project
+        const pj = await supabase.from('projects').insert([{ title, client_name: client }]).select();
+        if (pj.error) throw pj.error;
+        const project_id = pj.data[0].id;
+
+        // for each area block, resolve/create dependencies and insert project_area
+        const blocks = Array.from(document.getElementById('areasContainer').children);
+        for (const block of blocks) {
+          const areaInput = block.querySelector('input[name="area"]');
+          const widthInput = block.querySelector('input[name="width"]');
+          const heightInput = block.querySelector('input[name="height"]');
+          const itemInput = block.querySelector('input[name="item"]');
+          const catInput = block.querySelector('input[name="catalogue"]');
+          const codeInput = block.querySelector('input[name="code"]');
+          const descInput = block.querySelector('textarea[name="description"]');
+
+          const areaName = t(areaInput ? areaInput.value : null);
+          const width = widthInput && widthInput.value ? parseFloat(widthInput.value) : null;
+          const height = heightInput && heightInput.value ? parseFloat(heightInput.value) : null;
+          const itemName = t(itemInput ? itemInput.value : null);
+          const catalogueName = t(catInput ? catInput.value : null);
+          const code = t(codeInput ? codeInput.value : null);
+          const desc = t(descInput ? descInput.value : null);
+
+          const area_id = areaName ? await getOrCreateArea(areaName) : null;
+          const catalogue_id = catalogueName ? await getOrCreateCatalogue(catalogueName) : null;
+          const item_id = itemName ? await getOrCreateItem(itemName, catalogue_id) : null;
+
+          const payload = {
+            project_id,
+            area_id,
+            width,
+            height,
+            item_id,
+            catalogue_id,
+            code,
+            description: desc
+          };
+
+          const pa = await supabase.from('project_areas').insert([payload]);
+          if (pa.error) console.warn('project_area insert error', pa.error);
+        }
+
+        alert('Project saved ✓');
+        f.reset();
+        document.getElementById('areasContainer').innerHTML = '';
+        refreshDatalists();
+      } catch (err) {
+        console.error(err);
+        alert('Error: ' + (err.message || JSON.stringify(err)));
+      }
+    });
+
+    // initial: add one block + datalist refresh
+    (async function init(){
+      document.getElementById('addAreaBtn').click();
+      await refreshDatalists();
+    })();
+
+  </script>
+</body>
+</html>
