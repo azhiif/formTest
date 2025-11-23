@@ -7,99 +7,85 @@
     body { font-family: Arial; padding: 20px; }
     h2 { margin-top: 40px; }
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
+    th, td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }
     th { background: #f0f0f0; }
-    .loading { color: #555; }
+    img.thumb { max-width: 80px; max-height:80px; display:block; }
   </style>
 </head>
 <body>
+  <h1>All Tables Data</h1>
+  <p><a href="index.html">&larr; Back</a></p>
 
-<h1>All Tables Data</h1>
-<p><a href="index.html">&larr; Back</a></p>
+  <h2>Customers</h2>
+  <div id="customers-info">Loading...</div>
+  <table id="customers-table" hidden><thead></thead><tbody></tbody></table>
 
-<h2>Customers</h2>
-<div id="customers-info" class="loading">Loading...</div>
-<table id="customers-table" hidden>
-  <thead></thead>
-  <tbody></tbody>
-</table>
+  <h2>Areas</h2>
+  <div id="areas-info">Loading...</div>
+  <table id="areas-table" hidden><thead></thead><tbody></tbody></table>
 
-<h2>Areas</h2>
-<div id="areas-info" class="loading">Loading...</div>
-<table id="areas-table" hidden>
-  <thead></thead>
-  <tbody></tbody>
-</table>
+  <h2>Items</h2>
+  <div id="items-info">Loading...</div>
+  <table id="items-table" hidden><thead></thead><tbody></tbody></table>
 
-<h2>Items</h2>
-<div id="items-info" class="loading">Loading...</div>
-<table id="items-table" hidden>
-  <thead></thead>
-  <tbody></tbody>
-</table>
+  <h2>Staff</h2>
+  <div id="staff-info">Loading...</div>
+  <table id="staff-table" hidden><thead></thead><tbody></tbody></table>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  function esc(str) {
-    if (str === null || str === undefined) return "";
-    return String(str).replace(/[&<>"]/g, s => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"
-    }[s]));
-  }
-
-  function fmt(val) {
-    if (!val) return "";
-    if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-      return new Date(val).toLocaleString();
-    }
-    return esc(val);
-  }
-
-  async function loadTable(tableName, tableId) {
-    const info = document.getElementById(tableId + "-info");
-    const table = document.getElementById(tableId + "-table");
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
-
-    info.textContent = "Loading...";
-
-    const { data, error } = await supabase.from(tableName).select("*");
-
-    console.log(tableName, data, error);
-
-    if (error) {
-      info.textContent = "Error: " + error.message;
-      return;
-    }
-    if (!data.length) {
-      info.textContent = "No data found.";
-      return;
+    function esc(s){ if (s===null||s===undefined) return ''; return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function fmt(v){
+      if (!v) return '';
+      if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)) return new Date(v).toLocaleString();
+      return esc(v);
     }
 
-    info.textContent = `${data.length} rows`;
-    table.hidden = false;
+    async function loadTable(name, prefix) {
+      const info = document.getElementById(prefix + '-info');
+      const table = document.getElementById(prefix + '-table');
+      const thead = table.querySelector('thead');
+      const tbody = table.querySelector('tbody');
+      info.textContent = 'Loading...';
+      table.hidden = true;
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
 
-    const columns = Object.keys(data[0]);
+      const { data, error } = await supabase.from(name).select('*').order('id', { ascending: false });
+      console.log(name, data, error);
+      if (error) { info.textContent = 'Error: ' + error.message; return; }
+      if (!data || data.length === 0) { info.textContent = 'No rows'; return; }
 
-    // header
-    thead.innerHTML = "<tr>" + columns.map(c => `<th>${esc(c)}</th>`).join("") + "</tr>";
+      info.textContent = data.length + ' rows';
+      table.hidden = false;
 
-    // rows
-    tbody.innerHTML = data.map(row =>
-      "<tr>" + columns.map(col => `<td>${fmt(row[col])}</td>`).join("") + "</tr>"
-    ).join("");
-  }
+      // dynamic columns
+      const cols = Object.keys(data[0]);
+      thead.innerHTML = '<tr>' + cols.map(c=>`<th>${esc(c)}</th>`).join('') + '</tr>';
 
-  window.onload = function () {
-    loadTable("customers", "customers");
-    loadTable("areas", "areas");
-    loadTable("items", "items");
-  };
-</script>
+      // special: if staff and photo_url column present, render <img>
+      tbody.innerHTML = data.map(row => {
+        return '<tr>' + cols.map(col => {
+          const val = row[col];
+          if (name === 'staff' && col === 'photo_url' && val) {
+            return `<td><a href="${esc(val)}" target="_blank"><img class="thumb" src="${esc(val)}" alt="photo"></a></td>`;
+          }
+          return `<td>${fmt(val)}</td>`;
+        }).join('') + '</tr>';
+      }).join('');
+    }
+
+    window.onload = function(){
+      loadTable('customers','customers');
+      loadTable('areas','areas');
+      loadTable('items','items');
+      loadTable('staff','staff');
+    };
+  </script>
 </body>
 </html>
