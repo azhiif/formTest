@@ -6,28 +6,41 @@
   <style>body{font-family:Arial;padding:20px}label{display:block;margin:8px 0}</style>
 </head>
 <body>
-  <h2>Add Item</h2>
-  <form id="form">
-    <label>Item name <input name="name" required></label>
-    <label>Category <input name="category"></label>
-    <button type="submit">Save</button>
-  </form>
-  <p><a href="index.html">&larr; Back</a></p>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script>
+<h2>Add Item</h2>
+
+<form id="form">
+  <label>Item Name <input name="name" required></label>
+  <label>Category <input name="category"></label>
+  <button type="submit">Save</button>
+</form>
+
+<p><a href="index.html">&larr; Back</a></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
   const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
 
-    const supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    document.getElementById('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const payload = { name: e.target.name.value.trim(), category: e.target.category.value.trim() };
-      const { error } = await supabase.from('items').insert([payload]);
-      if (error) alert('Error: ' + error.message);
-      else { alert('Saved ✓'); e.target.reset(); }
-    });
-  </script>
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      name: e.target.name.value.trim(),
+      category: e.target.category.value.trim()
+    };
+
+    const { error } = await supabase.from('items').insert([payload]);
+
+    if (error) alert("Error: " + error.message);
+    else {
+      alert("Saved ✓");
+      e.target.reset();
+    }
+  });
+</script>
+
 </body>
 </html>
