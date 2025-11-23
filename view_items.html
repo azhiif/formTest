@@ -1,13 +1,50 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
-  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>View Items</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
 
-  // Correct global object:
+<h2>All Items</h2>
+
+<p><a href="index.html">&larr; Back</a></p>
+
+<table id="itemsTable">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Item Name</th>
+      <th>Category</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
+
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   async function loadItems() {
     const tableBody = document.querySelector("#itemsTable tbody");
+
+    if (!tableBody) {
+      console.error("Table body not found!");
+      return;
+    }
+
     tableBody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
 
     const { data, error } = await supabase
@@ -27,17 +64,21 @@
 
     tableBody.innerHTML = "";
 
-    data.forEach(item => {
+    data.forEach(it => {
       tableBody.innerHTML += `
         <tr>
-          <td>${item.id}</td>
-          <td>${item.name}</td>
-          <td>${item.category || "-"}</td>
-          <td>${new Date(item.created_at).toLocaleString()}</td>
+          <td>${it.id}</td>
+          <td>${it.name}</td>
+          <td>${it.category || '-'}</td>
+          <td>${new Date(it.created_at).toLocaleString()}</td>
         </tr>
       `;
     });
   }
 
-  loadItems();
+  // Ensure HTML is loaded before JS touches the table
+  window.onload = loadItems;
 </script>
+
+</body>
+</html>

@@ -15,14 +15,16 @@
   </form>
   <p><a href="index.html">&larr; Back</a></p>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- correct Supabase CDN (v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // << REPLACE THESE >>
+    // <-- REPLACE THESE with your project values -->
     const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
 
 
-    const supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // create client from the global 'supabase'
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -32,9 +34,27 @@
         phone: f.phone.value.trim(),
         place: f.place.value.trim()
       };
-      const { error } = await supabase.from('customers').insert([payload]);
-      if (error) {
-        alert('Error: ' + error.message);
+
+      // show loading
+      const btn = f.querySelector('button[type="submit"]');
+      const oldText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      // perform insert
+      const result = await supabase
+        .from('customers')
+        .insert([payload])
+        .select(); // select returns the inserted row(s) (handy for debugging)
+
+      console.log('Supabase insert result:', result);
+
+      // restore button
+      btn.disabled = false;
+      btn.innerText = oldText;
+
+      if (result.error) {
+        alert('Error: ' + result.error.message);
       } else {
         alert('Saved ✓');
         f.reset();
