@@ -2,83 +2,104 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>View Items</title>
+  <title>View All Data</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    h2 { margin-top: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 8px; }
     th { background: #f0f0f0; }
+    .loading { color: #555; }
   </style>
 </head>
 <body>
 
-<h2>All Items</h2>
-
+<h1>All Tables Data</h1>
 <p><a href="index.html">&larr; Back</a></p>
 
-<table id="itemsTable">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Item Name</th>
-      <th>Category</th>
-      <th>Created</th>
-    </tr>
-  </thead>
+<h2>Customers</h2>
+<div id="customers-info" class="loading">Loading...</div>
+<table id="customers-table" hidden>
+  <thead></thead>
   <tbody></tbody>
 </table>
 
-<!-- Supabase JS -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<h2>Areas</h2>
+<div id="areas-info" class="loading">Loading...</div>
+<table id="areas-table" hidden>
+  <thead></thead>
+  <tbody></tbody>
+</table>
 
+<h2>Items</h2>
+<div id="items-info" class="loading">Loading...</div>
+<table id="items-table" hidden>
+  <thead></thead>
+  <tbody></tbody>
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function loadItems() {
-    const tableBody = document.querySelector("#itemsTable tbody");
-
-    if (!tableBody) {
-      console.error("Table body not found!");
-      return;
-    }
-
-    tableBody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
-
-    const { data, error } = await supabase
-      .from("items")
-      .select("*")
-      .order("id", { ascending: false });
-
-    if (error) {
-      tableBody.innerHTML = "<tr><td colspan='4'>Error loading items</td></tr>";
-      return;
-    }
-
-    if (!data.length) {
-      tableBody.innerHTML = "<tr><td colspan='4'>No items yet</td></tr>";
-      return;
-    }
-
-    tableBody.innerHTML = "";
-
-    data.forEach(it => {
-      tableBody.innerHTML += `
-        <tr>
-          <td>${it.id}</td>
-          <td>${it.name}</td>
-          <td>${it.category || '-'}</td>
-          <td>${new Date(it.created_at).toLocaleString()}</td>
-        </tr>
-      `;
-    });
+  function esc(str) {
+    if (str === null || str === undefined) return "";
+    return String(str).replace(/[&<>"]/g, s => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"
+    }[s]));
   }
 
-  // Ensure HTML is loaded before JS touches the table
-  window.onload = loadItems;
-</script>
+  function fmt(val) {
+    if (!val) return "";
+    if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+      return new Date(val).toLocaleString();
+    }
+    return esc(val);
+  }
 
+  async function loadTable(tableName, tableId) {
+    const info = document.getElementById(tableId + "-info");
+    const table = document.getElementById(tableId + "-table");
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+
+    info.textContent = "Loading...";
+
+    const { data, error } = await supabase.from(tableName).select("*");
+
+    console.log(tableName, data, error);
+
+    if (error) {
+      info.textContent = "Error: " + error.message;
+      return;
+    }
+    if (!data.length) {
+      info.textContent = "No data found.";
+      return;
+    }
+
+    info.textContent = `${data.length} rows`;
+    table.hidden = false;
+
+    const columns = Object.keys(data[0]);
+
+    // header
+    thead.innerHTML = "<tr>" + columns.map(c => `<th>${esc(c)}</th>`).join("") + "</tr>";
+
+    // rows
+    tbody.innerHTML = data.map(row =>
+      "<tr>" + columns.map(col => `<td>${fmt(row[col])}</td>`).join("") + "</tr>"
+    ).join("");
+  }
+
+  window.onload = function () {
+    loadTable("customers", "customers");
+    loadTable("areas", "areas");
+    loadTable("items", "items");
+  };
+</script>
 </body>
 </html>
