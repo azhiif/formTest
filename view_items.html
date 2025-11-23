@@ -1,46 +1,15 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>View Items</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    th { background: #f0f0f0; }
-  </style>
-</head>
-<body>
-
-<h2>All Items</h2>
-
-<p><a href="index.html">&larr; Back</a></p>
-
-<table id="itemsTable">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Name</th>
-      <th>Category</th>
-      <th>Created</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // <<< REPLACE WITH YOUR PROJECT DETAILS >>>
-  const SUPABASE_URL = "https://bclxscvpjkewftbeeqjd.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjbHhzY3Zwamtld2Z0YmVlcWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4ODAyMDUsImV4cCI6MjA3OTQ1NjIwNX0.0kLf4dvMCtH467a-XqZlf6WP7KA9xBIeLGJ8TUBXodI";
+  const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
 
-  const supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Correct global object:
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   async function loadItems() {
     const tableBody = document.querySelector("#itemsTable tbody");
     tableBody.innerHTML = "<tr><td colspan='4'>Loading...</td></tr>";
 
-    // Fetch all rows
     const { data, error } = await supabase
       .from("items")
       .select("*")
@@ -51,15 +20,15 @@
       return;
     }
 
-    if (!data || data.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan='4'>No items added yet.</td></tr>";
+    if (!data.length) {
+      tableBody.innerHTML = "<tr><td colspan='4'>No items yet</td></tr>";
       return;
     }
 
     tableBody.innerHTML = "";
 
     data.forEach(item => {
-      const row = `
+      tableBody.innerHTML += `
         <tr>
           <td>${item.id}</td>
           <td>${item.name}</td>
@@ -67,12 +36,8 @@
           <td>${new Date(item.created_at).toLocaleString()}</td>
         </tr>
       `;
-      tableBody.innerHTML += row;
     });
   }
 
   loadItems();
 </script>
-
-</body>
-</html>
